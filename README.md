@@ -10,9 +10,11 @@ The spin compiler was tested against approximately 2000 OBJEX Spin Files to prod
 Usage
 -----
 
-``openspin.exe -u -I include-path-to-library-folder mainfile.spin``
-
 Run openspin.exe with no arguments to get a usage description.
+
+Generate Binary: ``openspin.exe -u -L include-path-to-library-folder mainfile.spin``
+
+Generate HTML Object View: ``openspin.exe -u -L include-path-to-library-folder --annotated-output html mainfile.spin``
 
 Downloads
 ---------
