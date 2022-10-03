@@ -1,37 +1,61 @@
 Introduction
 ============
 
-OpenSpin is an open source compiler for the Spin/PASM language of the Parallax Propeller. It was ported from Chip Gracey's original x86 assembler code. The only binary differences in the output are from the corrected handling of floating point numbers (which is now IEEE compliant).
+This is a fork of the OpenSpin compiler, an open source compiler for the Spin/PASM language of the Parallax Propeller. It was ported from Chip Gracey's original x86 assembler code (see https://github.com/parallaxinc/OpenSpin). The only binary differences in the output are from the corrected handling of floating point numbers (which is now IEEE compliant).
 
-There are solution/project files for VS 2015 & VS 2017, and there are make files for use with GCC/clang/etc. Tested on MinGW, linux, and Mac OSX. They build the PropellerCompiler library and openspin.exe.
+This fork was refactored to a more modern C++ dialect.
 
-The code successfully compiles all of the Library files shipped with PropTool as well as all of the files available in the OBEX as of August 2012. That's approximately 1450 spin files.
+The spin compiler was tested against approximately 2000 OBJEX Spin Files to produces binary exact results as Parallax OpenSpin compiler.
 
-OpenSpin allows symbols to be 254 characters long (instead of 31), has unused method elimination, and supports a basic [preprocessor](https://github.com/reltham/OpenSpin/wiki/Preprocessor). 
+Usage
+-----
 
-PropellerCompiler library
--------------------------
+``openspin.exe -u -I include-path-to-library-folder mainfile.spin``
 
-PropellerCompiler.cpp/h contain the interface to the compiler. Look at openspin.cpp for an example of how to work with the interface.
-
-openspin.exe
-------------
-
-openspin.exe is a command line wrapper for the compiler library. You give it a spin file and it passes it through the compiler and produces a .binary (or optional .eeprom) file with the same base name as the passed in spin file. There are several [command line options](https://github.com/reltham/OpenSpin/wiki/CommandLine) available. Run openspin.exe with no arguments to get a usage description.
+Run openspin.exe with no arguments to get a usage description.
 
 Downloads
 ---------
 
-### Builds provided by David Zemon's TeamCity service:
- Note: These are updated automatically whenever changes are submitted here, so they include changes between releases.
-* [Linux x86_64](http://david.zemon.name:8111/repository/download/OpenSpin_LinuxX8664/lastSuccessful/openspin.tar.gz?guest=1)
-* [Windows x86](http://david.zemon.name:8111/repository/download/OpenSpin_WindowsX86/lastSuccessful/openspin.zip?guest=1)
-* [Mac OS X](http://david.zemon.name:8111/repository/download/OpenSpin_MacOsX/2548:id/openspin.tar.gz?guest-1)
-* [Raspberry Pi](http://david.zemon.name:8111/repository/download/OpenSpin_RaspberryPi/lastSuccessful/openspin.tar.gz?guest=1)
+Prebuild static binaries can be found here: [releases][https://github.com/ThiloA/OpenSpin/releases]
 
-Thanks
-------
+* Oldest supported Windows (tested): Windows 2000 (x86)
+* Oldest supported Linux (tested): Debian 5 Kernel 2.6.26 (x86)
 
-* Thanks to Steve Denson, for the Makefile and testing on linux!
-* Thanks to David Betz for testing on Mac OSX.
-* Thanks to Eric Smith for providing the code and helping with integrating the preprocessor.
+Improvements
+------------
+
+* unused method optimization now works with objects that have more than 255 routines *before* optimization
+* switched from an almost one pass compiler to a tokenizer - parser - optimizer - generator architecture
+* uses exceptions instead of return values for error, continuation on errors (multiple error messages) should now be possible (not yet implemented)
+* limitations that have not reason in the interpreter or propeller chip architecture are gone (e.g. number of nested blocks, depth of expressions, cases, etc.)
+* additional json/html output of object for debugging purposes
+
+Known Limitations
+-----------------
+
+Some of the following limitations will be fixed in future releases.
+
+* The #include, #warn and #info macros are out of order (will be fixed)
+* Tree view (-t Option) is currently not supported
+* List of archives (-f Option) is currently not supported
+* Alternative preprocessor rules (-a Option) enabled always
+* Extract doc comments not supported (-d Option)
+* Dump Symbols (-s) not supported, you may use html output mode
+
+Building
+--------
+
+Run the following command to build the compiler. No external libraries aside from the C++ Standard Template Library are required.
+
+Linux (gcc):
+``g++ main.cpp -I. -O2 -o openspin``
+
+Linux (clang):
+``clang++ main.cpp -I. -O2 -o openspin``
+
+Windows (mingw):
+``mingw32-g++ main.cpp -I. -O2 -o openspin.exe``
+
+Older compilers may need an additional -std=c++11 parameter. Other compilers have not been tested. With msvc you might get problems regarding "incbin" macro. In this case define a macro SPINCOMPILER_EXCLUDE_HTML_SUPPORT. This will drop html output support.
+

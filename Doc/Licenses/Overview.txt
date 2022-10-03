@@ -1,0 +1,16 @@
+All Files except those in "3rdparty" folder are licensed under "MIT License", 
+see "MITLicense.txt"
+
+External components:
+
+3rdparty/incbin.h:
+    From: https://github.com/graphitemaster/incbin
+    Licensed under "Unlicense", see "Unlicense.txt"
+
+3rdparty/jquery.js: 
+    From: https://jquery.com/download/
+    Licensed unter "MIT License", see "MITLicense.txt"
+
+    
+This Software is based on OpenSpin
+    https://github.com/parallaxinc/OpenSpin

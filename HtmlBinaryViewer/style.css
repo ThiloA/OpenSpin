@@ -1,0 +1,76 @@
+* {
+    margin:0;
+    border:0;
+    padding:0;
+}
+#maincontent {
+    font-family:"monospace";
+    font-size:14pt;
+}
+.clear {
+    clear:both;
+}
+.annotation {
+    width:100%;
+    border-bottom:1px solid #000000;
+}
+.annotation-objectheader,.annotation-padding {
+    background-color:#CCCCCC;
+}
+.annotation-methodtable {
+    background-color:#CCEECC;
+}
+.annotation-objecttable {
+    background-color:#CCCCEE;
+}
+.annotation-datsection {
+    background-color:#88FF88;
+}
+.annotation-method {
+    background-color:#AA88FF;
+}
+.annotation-stringpool {
+    background-color:#7777EE;
+}
+
+.line {
+    height:1.2em;
+    display:block;
+    width:100%;
+}
+.offset {
+    display:block;
+    width:6em;
+    border-left:1px solid #000000;
+    float:left;
+    height:100%;
+}
+.hexbytes {
+    display:block;
+    width:25em;
+    border-left:1px solid #000000;
+    float:left;
+    height:100%;
+}
+.description {
+    display:block;
+    float:left;
+    height:100%;
+}
+.collapsebuttons {
+    border-left:1px solid #000000;
+    border-right:1px solid #000000;
+    display:block;
+    float:left;
+    width:5em;
+    height:100%;
+}
+.collapsebuttons > button {
+    width:1em;
+    height:1.2em;
+    border:1px solid #000000;
+    background-color:#CCCCCC;
+}
+.collapsebuttons > button.selected {
+    background-color:#FFCCCC;
+}
