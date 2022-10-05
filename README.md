@@ -12,25 +12,29 @@ Usage
 
 Run openspin.exe with no arguments to get a usage description.
 
-Generate Binary: ``openspin.exe -u -L include-path-to-library-folder mainfile.spin``
+Generate Binary: 
 
-Generate HTML Object View: ``openspin.exe -u -L include-path-to-library-folder --annotated-output html mainfile.spin``
+``openspin.exe -u -L include-path-to-library-folder mainfile.spin``
+
+Generate HTML Object View: 
+
+``openspin.exe -u -L include-path-to-library-folder --annotated-output html mainfile.spin``
 
 Downloads
 ---------
 
-Prebuild static binaries can be found here: [releases][https://github.com/ThiloA/OpenSpin/releases]
+Prebuild static binaries can be found under [releases](https://github.com/ThiloA/OpenSpin/releases)
 
-* Oldest supported Windows (tested): Windows 2000 (x86)
-* Oldest supported Linux (tested): Debian 5 Kernel 2.6.26 (x86)
+* Oldest supported Microsoft Windows (tested): Microsoft Windows 2000 (x86)
+* Oldest supported GNU/Linux (tested): Debian 5 Kernel 2.6.26 (x86)
 
 Improvements
 ------------
 
-* unused method optimization now works with objects that have more than 255 routines *before* optimization
-* switched from an almost one pass compiler to a tokenizer - parser - optimizer - generator architecture
-* uses exceptions instead of return values for error, continuation on errors (multiple error messages) should now be possible (not yet implemented)
-* limitations that have not reason in the interpreter or propeller chip architecture are gone (e.g. number of nested blocks, depth of expressions, cases, etc.)
+* unused method optimization now works with objects containing more than 255 routines *before* optimization
+* switched from an "semi one pass compiler" to a tokenizer - parser - optimizer - generator architecture
+* uses exceptions instead of return values for errors, multiple error messages should now be possible (not yet implemented)
+* limitations that have no reason in the spin interpreter or propeller chip architecture are gone (e.g. number of nested blocks, depth of expressions, cases, etc.)
 * additional json/html output of object for debugging purposes
 
 Known Limitations
@@ -38,7 +42,7 @@ Known Limitations
 
 Some of the following limitations will be fixed in future releases.
 
-* The #include, #warn and #info macros are out of order (will be fixed)
+* #include, #warn and #info macros are out of order (will be fixed)
 * Tree view (-t Option) is currently not supported
 * List of archives (-f Option) is currently not supported
 * Alternative preprocessor rules (-a Option) enabled always
@@ -61,3 +65,7 @@ Windows (mingw):
 
 Older compilers may need an additional -std=c++11 parameter. Other compilers have not been tested. With msvc you might get problems regarding "incbin" macro. In this case define a macro SPINCOMPILER_EXCLUDE_HTML_SUPPORT. This will drop html output support.
 
+License
+-------
+
+See [Doc/Licenses/Overview.txt](Doc/Licenses/Overview.txt)
