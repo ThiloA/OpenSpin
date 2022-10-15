@@ -23,7 +23,8 @@ struct CompilerSettings {
     enum struct AnnotatedOutput {
         None,
         JSON,
-        HTML
+        HTML,
+        AST
     };
 
     CompilerSettings():eepromSize(32768),unusedMethodOptimization(UnusedMethods::Keep),annotatedOutput(AnnotatedOutput::None),defaultCompileMode(true),usePreProcessor(true),compileDatOnly(false),binaryMode(true) {}

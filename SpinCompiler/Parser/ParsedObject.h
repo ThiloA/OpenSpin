@@ -96,7 +96,7 @@ public:
         return -1;
     }
 
-    explicit ParsedObject():m_nextObjectClassId(1),m_nextObjectInstanceId(1),m_nextMethodId(1),m_nextDatSymbolId(1),m_nextVarSymbolId(1) {}
+    explicit ParsedObject(const std::string &shortName):shortName(shortName),m_nextObjectClassId(1),m_nextObjectInstanceId(1),m_nextMethodId(1),m_nextDatSymbolId(1),m_nextVarSymbolId(1) {}
     void clear() { //TODO still required?
         constants.clear();
         methods.clear();
@@ -112,6 +112,7 @@ public:
     void clearDatSection() {
         datCode.clear();
     }
+    std::string shortName;
     std::vector<Constant> constants;
     std::vector<MethodP> methods;
     std::vector<ChildObject> childObjects;

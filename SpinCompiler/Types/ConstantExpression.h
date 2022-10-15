@@ -21,7 +21,7 @@ struct AbstractConstantExpression {
     AbstractConstantExpression(const SourcePosition& sourcePosition):sourcePosition(sourcePosition) {}
     virtual ~AbstractConstantExpression() {}
     virtual int evaluate(AbstractBinaryGenerator* generator) const = 0;
-    virtual std::string toString() const = 0;
+    virtual std::string toILangStr() const = 0;
     virtual bool isConstant(int *) const {
         return false;
     }
@@ -38,7 +38,7 @@ struct ConstantValueExpression : AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator*) const {
         return value;
     }
-    virtual std::string toString() const {
+    virtual std::string toILangStr() const {
         return std::to_string(value);
     };
     virtual bool isConstant(int *resultValue) const {
@@ -119,8 +119,8 @@ struct UnaryConstantExpression : public AbstractConstantExpression {
         return *(int*)(&result); //TODO undef behaviour?
     }
 
-    virtual std::string toString() const {
-        return OperatorType::toString(operation, param->toString(), std::string());
+    virtual std::string toILangStr() const {
+        return "("+OperatorType::toString(operation)+" "+param->toILangStr()+")";
     };
 };
 
@@ -248,8 +248,8 @@ struct BinaryConstantExpression : public AbstractConstantExpression {
         return (value >> places) | (value << ((8 * sizeof(value)) - places));
     }
 
-    virtual std::string toString() const {
-        return "("+OperatorType::toString(operation, left->toString(), right->toString())+")";
+    virtual std::string toILangStr() const {
+        return "("+OperatorType::toString(operation)+" "+left->toILangStr()+" "+right->toILangStr()+")";
     };
 };
 
@@ -259,8 +259,8 @@ struct DatCurrentCogPosConstantExpression : public AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator* generator) const {
         return generator->currentDatCogOrg() >> 2;
     }
-    virtual std::string toString() const {
-        return "CurrentCogPos";
+    virtual std::string toILangStr() const {
+        return "(currentCogPos)";
     }
 };
 
@@ -272,8 +272,8 @@ struct DatSymbolConstantExpression : public AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator* generator) const {
         return generator->valueOfDatSymbol(datSymbolId, isCogPos);
     }
-    virtual std::string toString() const {
-        return (isCogPos ? "CogPos[" : "DatPos[")+std::to_string(datSymbolId.value())+"]";
+    virtual std::string toILangStr() const {
+        return (isCogPos ? "(cogPos " : "(datPos ")+std::to_string(datSymbolId.value())+")";
     }
 };
 
@@ -284,8 +284,8 @@ struct VarSymbolConstantExpression : public AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator* generator) const {
         return generator->addressOfVarSymbol(varSymbolId);
     }
-    virtual std::string toString() const {
-        return "Var["+std::to_string(varSymbolId.value())+"]";
+    virtual std::string toILangStr() const {
+        return "(var "+std::to_string(varSymbolId.value())+")";
     }
 };
 
@@ -296,8 +296,8 @@ struct LocSymbolConstantExpression : public AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator* generator) const {
         return generator->addressOfLocSymbol(locSymbolId);
     }
-    virtual std::string toString() const {
-        return "Loc["+std::to_string(locSymbolId.value())+"]";
+    virtual std::string toILangStr() const {
+        return "(loc "+std::to_string(locSymbolId.value())+")";
     }
 };
 
@@ -309,8 +309,8 @@ struct ChildObjConstantExpression : public AbstractConstantExpression {
     virtual int evaluate(AbstractBinaryGenerator* generator) const {
         return generator->valueOfConstantOfObjectClass(objectClass, constantIndex);
     }
-    virtual std::string toString() const {
-        return "ObjConst["+std::to_string(objectClass.value())+":"+std::to_string(constantIndex)+"]";
+    virtual std::string toILangStr() const {
+        return "(objconst "+std::to_string(objectClass.value())+" "+std::to_string(constantIndex)+")";
     }
 };
 

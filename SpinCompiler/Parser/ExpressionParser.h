@@ -52,30 +52,29 @@ public:
         return paramExpr;
     }
 
-    VariableExpressionP compileVariableSideEffectOperationX(unsigned char vOperator, AbstractSpinVariableP varInfo) {
-        return VariableExpressionP(new VariableExpression(varInfo,AbstractSpinVariable::Modify,vOperator));
+    AbstractExpressionP compileVariableSideEffectOperation(int vOperator, AbstractSpinVariableP varInfo) {
+        return AbstractExpressionP(new UnaryAssignExpression(varInfo,vOperator));
     }
 
-    AbstractExpressionP compileVariableAssignExpressionXX(unsigned char vOperator, AbstractSpinVariableP varInfo, bool mode) {
+    AbstractExpressionP compileVariableAssignExpression(OperatorType::Type operation, AbstractSpinVariableP varInfo) {
         auto pos = m_reader.getSourcePosition();
         auto valueExpression = parseExpression();
-        VariableExpressionP varExpr(new VariableExpression(varInfo,mode ? AbstractSpinVariable::Modify : AbstractSpinVariable::Write,vOperator));
-        return AbstractExpressionP(new AssignExpression(pos, valueExpression, varExpr));
+        return AbstractExpressionP(new AssignExpression(pos, valueExpression, varInfo, operation));
     }
 
-    AbstractExpressionP compileVariablePreSignExtendOrRandomX(unsigned char vOperator) {
-        return compileVariableSideEffectOperationX(vOperator, getVariable());
+    AbstractExpressionP compileVariablePreSignExtendOrRandom(int vOperator) {
+        return compileVariableSideEffectOperation(vOperator, getVariable());
     }
 
-    AbstractExpressionP compileVariableIncOrDecX(unsigned char vOperator, AbstractSpinVariableP varInfo) {
+    AbstractExpressionP compileVariableIncOrDec(int vOperator, AbstractSpinVariableP varInfo) {
         auto cogReg = std::dynamic_pointer_cast<CogRegisterSpinVariable>(varInfo);
         if (!cogReg || !cogReg->indexExpression)
             vOperator |= (((varInfo->size + 1) & 3) << 1);
-        return VariableExpressionP(new VariableExpression(varInfo,AbstractSpinVariable::Modify,vOperator));
+        return AbstractExpressionP(new UnaryAssignExpression(varInfo,vOperator));
     }
 
-    AbstractExpressionP compileVariablePreIncOrDecX(unsigned char vOperator) {
-        return compileVariableIncOrDecX(vOperator, getVariable());
+    AbstractExpressionP compileVariablePreIncOrDec(int vOperator) {
+        return compileVariableIncOrDec(vOperator, getVariable());
     }
 
     AbstractSpinVariableP getVariable() {
@@ -99,9 +98,9 @@ public:
         if (tk0.type == Token::Size) {
             auto dynamicAddressExpression = readIndexExpression(true);
             auto indexExpression = readIndexExpression(false);
-            return AbstractSpinVariableP(new DirectMemorySpinVariable(tk0.sourcePosition, tk0.value, dynamicAddressExpression, indexExpression));
+            return AbstractSpinVariableP(new DirectMemorySpinVariable(tk0.sourcePosition, AbstractSpinVariable::SizeModifier(tk0.value), dynamicAddressExpression, indexExpression));
         }
-        int size=2;
+        AbstractSpinVariable::SizeModifier size=AbstractSpinVariable::Long;
         NamedSpinVariable::VarType varType = NamedSpinVariable::LocMemoryAccess;
         AbstractConstantExpressionP address;
         if (tk0.type == Token::Result)
@@ -110,13 +109,13 @@ public:
             if (auto varSym = std::dynamic_pointer_cast<SpinVarSectionSymbol>(tk0.resolvedSymbol)) {
                 varType = NamedSpinVariable::VarMemoryAccess;
                 address = AbstractConstantExpressionP(new VarSymbolConstantExpression(tk0.sourcePosition, varSym->id));
-                size = varSym->size;
+                size = AbstractSpinVariable::SizeModifier(varSym->size);
             }
             else if (auto datSym = std::dynamic_pointer_cast<SpinDatSectionSymbol>(tk0.resolvedSymbol)) {
                 //TODO if(datSym->isRes) return false; ? mit original program schauen, ob man auch auf einen res bezeichner zugreifen kann
                 varType = NamedSpinVariable::DatMemoryAccess;
                 address = AbstractConstantExpressionP(new DatSymbolConstantExpression(tk0.sourcePosition, datSym->id, false));
-                size = datSym->size;
+                size = AbstractSpinVariable::SizeModifier(datSym->size);
             }
             else if (auto locSym = std::dynamic_pointer_cast<SpinLocSymbol>(tk0.resolvedSymbol))
                 address = AbstractConstantExpressionP(new LocSymbolConstantExpression(tk0.sourcePosition, locSym->id));
@@ -135,7 +134,7 @@ public:
                     throw CompilerError(ErrorType::ebwol, tk);
                 if (size < (tk.value & 0xFF)) // new size must be same or smaller
                     throw CompilerError(ErrorType::sombs, tk);
-                size = (tk.value & 0xFF); // update size
+                size = AbstractSpinVariable::SizeModifier(tk.value & 0xFF); // update size
                 indexExpression = readIndexExpression(false); //TODO index required?
             }
         }
@@ -143,7 +142,7 @@ public:
     }
 
     // compile obj[].pub
-    AbstractExpressionP parseChildObjectMethodCall(const int anchor, SpinObjSymbolP objSymbol) {
+    AbstractExpressionP parseChildObjectMethodCall(SpinObjSymbolP objSymbol, const bool trapCall) {
         auto sourcePosition = m_reader.getSourcePosition();
         auto objectIndex = readIndexExpression(false); // check for [index]
         m_reader.forceElement(Token::Dot);
@@ -154,25 +153,25 @@ public:
 
         // compile any parameters the pub has
         auto parameters = parseParameters(method->parameterCount);
-        return AbstractExpressionP(new MethodCallExpression(sourcePosition, parameters, objectIndex, objSymbol->objInstanceId, method->methodId, anchor));
+        return AbstractExpressionP(new MethodCallExpression(sourcePosition, parameters, objectIndex, objSymbol->objInstanceId, method->methodId, trapCall));
     }
 
-    AbstractExpressionP parseMethodCall(const SourcePosition& sourcePosition, int anchor, SpinSubSymbolP subSymbol) {
+    AbstractExpressionP parseMethodCall(const SourcePosition& sourcePosition, SpinSubSymbolP subSymbol, const bool trapCall) {
         auto parameters = parseParameters(subSymbol->parameterCount);
-        return AbstractExpressionP(new MethodCallExpression(sourcePosition, parameters, AbstractExpressionP(), ObjectInstanceId(), subSymbol->methodId, anchor));
+        return AbstractExpressionP(new MethodCallExpression(sourcePosition, parameters, AbstractExpressionP(), ObjectInstanceId(), subSymbol->methodId, trapCall));
     }
 
     // compile \sub or \obj
-    AbstractExpressionP parseTryCall(int anchor) {
+    AbstractExpressionP parseTryCall(const bool trapCall) {
         auto tk = m_reader.getNextToken();
         if (auto subSym = std::dynamic_pointer_cast<SpinSubSymbol>(tk.resolvedSymbol))
-            return parseMethodCall(tk.sourcePosition, anchor, subSym);
+            return parseMethodCall(tk.sourcePosition, subSym, trapCall);
         if (auto objSym = std::dynamic_pointer_cast<SpinObjSymbol>(tk.resolvedSymbol))
-            return parseChildObjectMethodCall(anchor, objSym);
+            return parseChildObjectMethodCall(objSym, trapCall);
         throw CompilerError(ErrorType::easoon, tk);
     }
 
-    AbstractExpressionP parseCogNew(bool popReturnValue) {
+    AbstractExpressionP parseCogNew() {
         // see if first param is a sub
         auto sourcePosition = m_reader.getSourcePosition();
         m_reader.forceElement(Token::LeftBracket);
@@ -183,14 +182,14 @@ public:
             m_reader.forceElement(Token::Comma);
             auto stackExpression = parseExpression(); // compile stack expression
             m_reader.forceElement(Token::RightBracket);
-            return AbstractExpressionP(new CogNewSpinExpression(sourcePosition, parameters, stackExpression, subSym->methodId, popReturnValue));
+            return AbstractExpressionP(new CogNewSpinExpression(sourcePosition, parameters, stackExpression, subSym->methodId));
         }
 
         // it is not a sub, so backup and compile as cognew(address, parameter)
         m_reader.goBack();
         m_reader.goBack();
         auto params = parseParameters(2);
-        return AbstractExpressionP(new CogNewAsmExpression(sourcePosition, params[0], params[1], popReturnValue));
+        return AbstractExpressionP(new CogNewAsmExpression(sourcePosition, params[0], params[1]));
     }
 private:
     ConstantExpressionParser::Result tryParseConstantExpression(bool mustResolve, bool isInteger) {
@@ -210,15 +209,13 @@ private:
         combineNegativeSignWithConstant(tk);
         tk.subToNeg();
 
-        const int opType = tk.opType;
-
         switch (tk.type) {
             case Token::AtAt:
                 return AbstractExpressionP(new AtAtExpression(tk.sourcePosition, parseBinaryExpression(0)));
 
             case Token::Unary:
                 // tk.value = precedence for Token::type_unary
-                return AbstractExpressionP(new UnaryExpression(tk.sourcePosition, parseBinaryExpression(tk.value), (unsigned char)opType | 0xE0));
+                return AbstractExpressionP(new UnaryExpression(tk.sourcePosition, parseBinaryExpression(tk.value), OperatorType::Type(tk.opType))); //TODO remove operator cast
 
             case Token::LeftBracket: {
                 auto expr = parseTopExpression();
@@ -254,7 +251,7 @@ private:
                 m_reader.goBack();
                 break;
             }
-            resultExpr = AbstractExpressionP(new BinaryExpression(tk.sourcePosition, resultExpr, parseBinaryExpression(precedence), (unsigned char)(tk.opType | 0xE0)));
+            resultExpr = AbstractExpressionP(new BinaryExpression(tk.sourcePosition, resultExpr, parseBinaryExpression(precedence), OperatorType::Type(tk.opType))); //TODO remove operator cast
         }
         return resultExpr;
     }
@@ -300,7 +297,7 @@ private:
     // compile obj[].pub\obj[]#con
     AbstractExpressionP parseChildObjectAccess(SpinObjSymbolP objSymbol) {
         if (!m_reader.checkElement(Token::Pound)) // check for obj#con
-            return parseChildObjectMethodCall(0, objSymbol); // not obj#con, so do obj[].pub
+            return parseChildObjectMethodCall(objSymbol, false); // not obj#con, so do obj[].pub
         // lookup the symbol to get the value to compile
         auto sourcePosition = m_reader.getSourcePosition();
         return AbstractExpressionP(new PushConstantExpression(sourcePosition, m_context.objectContext.getObjConstant(m_reader.getNextToken(), objSymbol->objectClass)->expression));
@@ -355,12 +352,12 @@ private:
         auto varInfo = getVariable();
         if (!varInfo->canTakeReference())
             throw CompilerError(ErrorType::eamvaa, varInfo->sourcePosition);
-        return VariableExpressionP(new VariableExpression(varInfo,AbstractSpinVariable::Reference,0));
+        return AbstractExpressionP(new VariableExpression(varInfo,true));
     }
 
     AbstractExpressionP parseBuiltInExpression(const Token& tk) {
         auto parameters = parseParameters(tk.unpackBuiltInParameterCount());
-        return AbstractExpressionP(new CallBuiltInExpression(tk.sourcePosition, parameters, tk.unpackBuiltInByteCode()));
+        return AbstractExpressionP(new CallBuiltInExpression(tk.sourcePosition, parameters, BuiltInFunction::Type(tk.unpackBuiltInByteCode())));
     }
 
     AbstractExpressionP parsePrimary(const Token& tk0) {
@@ -374,14 +371,14 @@ private:
             case Token::Trunc:
                 return parsePrimaryFloatRoundTrunc();
             case Token::Backslash:
-                return parseTryCall(0x02);
+                return parseTryCall(true);
             case Token::DefinedSymbol: {
                 if (auto conSym = std::dynamic_pointer_cast<SpinConstantSymbol>(tk0.resolvedSymbol))
                     return AbstractExpressionP(new PushConstantExpression(tk0.sourcePosition, conSym->expression));
                 if (auto objSym = std::dynamic_pointer_cast<SpinObjSymbol>(tk0.resolvedSymbol))
                     return parseChildObjectAccess(objSym);
                 if (auto subSym = std::dynamic_pointer_cast<SpinSubSymbol>(tk0.resolvedSymbol))
-                    return parseMethodCall(tk0.sourcePosition, 0, subSym);
+                    return parseMethodCall(tk0.sourcePosition, subSym, false);
                 break;
             }
             case Token::Look:
@@ -395,22 +392,22 @@ private:
             case Token::CogId:
                 return compileTermCogIdX(tk0.sourcePosition);
             case Token::CogNew:
-                return parseCogNew(false);
+                return parseCogNew();
             case Token::InstAlwaysReturn: // instruction always-returns
             case Token::InstCanReturn: // instruction can-return
                 return parseBuiltInExpression(tk0);
             case Token::At: // @var
                 return parseAtExpression();
             case Token::Inc: // assign pre-inc w/push  ++var
-                return compileVariablePreIncOrDecX(0xA0);
+                return compileVariablePreIncOrDec(0x20);
             case Token::Dec: // assign pre-dec w/push  --var
-                return compileVariablePreIncOrDecX(0xB0);
+                return compileVariablePreIncOrDec(0x30);
             case Token::Tilde: // assign sign-extern byte w/push  ~var
-                return compileVariablePreSignExtendOrRandomX(0x90);
+                return compileVariablePreSignExtendOrRandom(0x10);
             case Token::TildeTilde: // assign sign-extern word w/push  ~~var
-                return compileVariablePreSignExtendOrRandomX(0x94);
+                return compileVariablePreSignExtendOrRandom(0x14);
             case Token::Random: // assign random forward w/push  ?var
-                return compileVariablePreSignExtendOrRandomX(0x88);
+                return compileVariablePreSignExtendOrRandom(0x08);
             default:
                 break;
         }
@@ -420,33 +417,30 @@ private:
         const auto tk2 = m_reader.getNextToken();
         switch (tk2.type) {
             case Token::Inc: // assign post-inc w/push  var++
-                return compileVariableIncOrDecX(0xA8, varInfo);
+                return compileVariableIncOrDec(0x28, varInfo);
             case Token::Dec: // assign post-dec w/push  var--
-                return compileVariableIncOrDecX(0xB8, varInfo);
+                return compileVariableIncOrDec(0x38, varInfo);
             case Token::Random: // assign random reverse w/push  var?
-                return compileVariableSideEffectOperationX(0x8C, varInfo);
+                return compileVariableSideEffectOperation(0x0C, varInfo);
             case Token::Tilde: // assign post-clear w/push  var~
-                return compileVariableSideEffectOperationX(0x98, varInfo);
+                return compileVariableSideEffectOperation(0x18, varInfo);
             case Token::TildeTilde: // assign post-set w/push  var~~
-                return compileVariableSideEffectOperationX(0x9C, varInfo);
+                return compileVariableSideEffectOperation(0x1C, varInfo);
             case Token::Assign: // assign write w/push  var :=
-                return compileVariableAssignExpressionXX(0x80, varInfo, true);
+                return compileVariableAssignExpression(OperatorType::None, varInfo);
             default:
                 break;
         }
-        unsigned char varOperator = 0x80; // assign write w/push
         // var binaryop?
         if (tk2.type == Token::Binary) {
-            varOperator = 0xC0 | (tk2.opType & 0xFF);	// assign math w/swapargs w/push
-
             // check for '=' after binary op
             auto tk3 = m_reader.getNextToken();
             if (tk3.type == Token::Equal)
-                return compileVariableAssignExpressionXX(varOperator, varInfo, true);
+                return compileVariableAssignExpression(OperatorType::Type(tk2.opType), varInfo); //TODO operator type cast weg
             m_reader.goBack(); // not '=' so backup
         }
         m_reader.goBack(); // no post-var modifier, so backup
-        return VariableExpressionP(new VariableExpression(varInfo,AbstractSpinVariable::Read,0));
+        return AbstractExpressionP(new VariableExpression(varInfo,false));
     }
 
     AbstractExpressionP readIndexExpression(bool required) {

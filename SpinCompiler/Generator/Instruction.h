@@ -14,6 +14,21 @@
 #include "SpinCompiler/Generator/Expression.h"
 #include "SpinCompiler/Types/ConstantExpression.h"
 
+/*
+    AbstractInstruction is one of
+        ExpressionInstruction
+        CogInitSpinInstruction
+        CogInitAsmInstruction
+        AbortOrReturnInstruction
+        NextOrQuitInstruction
+        CallBuiltInInstruction
+        BlockInstruction
+        IfInstruction
+        CaseInstruction
+        LoopConditionInstruction
+        LoopVarInstruction
+ */
+
 struct InstructionLoopContext {
     enum Type {NoLoop,RepeatCountLoop,NonRepeatCountLoop};
     InstructionLoopContext():type(NoLoop),caseCount(0) {}
@@ -68,7 +83,7 @@ public:
     explicit ExpressionInstruction(AbstractExpressionP expression):AbstractInstruction(expression->sourcePosition),expression(expression) {}
     virtual ~ExpressionInstruction() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext&) const {
-        expression->generate(byteCodeWriter);
+        expression->generate(byteCodeWriter, true);
     }
     virtual void iterateChildExpressions(const std::function<void(AbstractExpressionP)>& callback) const {
         AbstractExpression::iterateExpression(expression, callback);
@@ -98,11 +113,11 @@ public:
     virtual ~CogInitSpinInstruction() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext&) const {
         for (auto p: parameters)
-            p->generate(byteCodeWriter);
+            p->generate(byteCodeWriter, false);
         byteCodeWriter.appendCogInitNewSpinSubroutine(sourcePosition, int(parameters.size()), methodId);
-        stackExpression->generate(byteCodeWriter);
+        stackExpression->generate(byteCodeWriter, false);
         byteCodeWriter.appendStaticByte(0x15); // run
-        cogIdExpression->generate(byteCodeWriter);
+        cogIdExpression->generate(byteCodeWriter, false);
         byteCodeWriter.appendStaticByte(0x3F); // regop
         byteCodeWriter.appendStaticByte(0x8F); // read+dcurr
         byteCodeWriter.appendStaticByte(0x37); // constant mask
@@ -139,9 +154,9 @@ public:
         AbstractInstruction(sourcePosition),cogId(cogId),address(address),startParameter(startParameter) {}
     virtual ~CogInitAsmInstruction() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext&) const {
-        cogId->generate(byteCodeWriter);
-        address->generate(byteCodeWriter);
-        startParameter->generate(byteCodeWriter);
+        cogId->generate(byteCodeWriter, false);
+        address->generate(byteCodeWriter, false);
+        startParameter->generate(byteCodeWriter, false);
         byteCodeWriter.appendStaticByte(0x2C);
     }
     virtual void iterateChildExpressions(const std::function<void(AbstractExpressionP)>& callback) const {
@@ -173,7 +188,7 @@ public:
     virtual ~AbortOrReturnInstruction() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext&) const {
         if (returnValue) {
-            returnValue->generate(byteCodeWriter);
+            returnValue->generate(byteCodeWriter, false);
             byteCodeWriter.appendStaticByte(isAbort ? 0X31 : 0X33);
         }
         else
@@ -230,7 +245,7 @@ public:
     virtual ~CallBuiltInInstruction() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext&) const {
         for (auto p:parameters)
-            p->generate(byteCodeWriter);
+            p->generate(byteCodeWriter, false);
         byteCodeWriter.appendStaticByte(opCode);
     }
     virtual void iterateChildExpressions(const std::function<void(AbstractExpressionP)>& callback) const {
@@ -300,7 +315,7 @@ public:
         for (unsigned int i=0; i<branches.size(); ++i) {
             auto b = branches[i];
             bool hasMoreBranches = (i < branches.size()-1) || elseBranch;
-            b.condition->generate(byteCodeWriter);
+            b.condition->generate(byteCodeWriter, false);
             byteCodeWriter.appendStaticByte(b.conditionInverted ? 0x0B : 0x0A);
             byteCodeWriter.appendRelativeAddress(nextIfBranchLabel); //jump to next branch
             b.instruction->generate(byteCodeWriter, parentLoopContext);
@@ -366,7 +381,7 @@ public:
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, const InstructionLoopContext& parentLoopContext) const {
         auto endLabel = byteCodeWriter.reserveLabel();
         byteCodeWriter.appendAbsoluteAddress(endLabel);
-        condition->generate(byteCodeWriter);
+        condition->generate(byteCodeWriter, false);
 
         auto childLoopContext = parentLoopContext.newCaseBlock();
 
@@ -375,9 +390,9 @@ public:
             auto caseLbl = byteCodeWriter.reserveLabel();
             caseLabels[i]=caseLbl;
             for (auto e:cases[i].expressions) {
-                e.expr1->generate(byteCodeWriter);
+                e.expr1->generate(byteCodeWriter, false);
                 if (e.expr2)
-                    e.expr2->generate(byteCodeWriter);
+                    e.expr2->generate(byteCodeWriter, false);
                 byteCodeWriter.appendStaticByte(e.expr2 ? 0x0E : 0x0D); // enter bytecode for case range or case value into obj
                 byteCodeWriter.appendRelativeAddress(caseLbl);
             }
@@ -443,7 +458,7 @@ public:
         auto quitLabel = byteCodeWriter.reserveLabel();
         auto childLoopContext = parentLoopContext.newLoopBlock(type == RepeatCount,nextLabel,quitLabel);
         if (type == RepeatCount) {
-            condition->generate(byteCodeWriter);
+            condition->generate(byteCodeWriter, false);
             byteCodeWriter.appendStaticByte(0x08); // (tjz)
             byteCodeWriter.appendRelativeAddress(quitLabel);
             auto reverseLabel = byteCodeWriter.reserveLabel();
@@ -455,7 +470,7 @@ public:
         }
         else if (type == PreWhile || type == PreUntil) {
             byteCodeWriter.placeLabelHere(nextLabel);
-            condition->generate(byteCodeWriter); //condition
+            condition->generate(byteCodeWriter, false); //condition
             byteCodeWriter.appendStaticByte(type == PreWhile ? 0x0A : 0x0B); // enter the passed in bytecode (jz or jnz)
             byteCodeWriter.appendRelativeAddress(quitLabel);
             instruction->generate(byteCodeWriter, childLoopContext);
@@ -467,7 +482,7 @@ public:
             byteCodeWriter.placeLabelHere(reverseLabel);
             instruction->generate(byteCodeWriter, childLoopContext);
             byteCodeWriter.placeLabelHere(nextLabel);
-            condition->generate(byteCodeWriter);
+            condition->generate(byteCodeWriter, false);
             byteCodeWriter.appendStaticByte(type == PostWhile ? 0x0B : 0x0A);
             byteCodeWriter.appendRelativeAddress(reverseLabel);
         }
@@ -512,16 +527,16 @@ public:
         auto nextLabel = byteCodeWriter.reserveLabel();
         auto quitLabel = byteCodeWriter.reserveLabel();
         auto childLoopContext = parentLoopContext.newLoopBlock(false,nextLabel,quitLabel);
-        from->generate(byteCodeWriter);
+        from->generate(byteCodeWriter, false);
         variable->generate(byteCodeWriter,AbstractSpinVariable::Write);
         auto reverseLabel = byteCodeWriter.reserveLabel();
         byteCodeWriter.placeLabelHere(reverseLabel);
         instruction->generate(byteCodeWriter, childLoopContext);
         byteCodeWriter.placeLabelHere(nextLabel); // set 'next' address
         if (step)
-            step->generate(byteCodeWriter);
-        from->generate(byteCodeWriter);
-        to->generate(byteCodeWriter);
+            step->generate(byteCodeWriter, false);
+        from->generate(byteCodeWriter, false);
+        to->generate(byteCodeWriter, false);
         variable->generate(byteCodeWriter, AbstractSpinVariable::Modify);
         byteCodeWriter.appendStaticByte(step ? 0x06 : 0x02);
         byteCodeWriter.appendRelativeAddress(reverseLabel); // compile reverse address

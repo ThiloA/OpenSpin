@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     for (int i=1; i<argc; ++i)
         args[i-1] = std::string(argv[i]);
 #if 0
-    return TestCase::runTestCompileAndCompare(args);
+    return TestCase::runTestCompileAndCompare(args) ? 0 : 1;
 #else
     CommandLineInterface cli;
     if (args.empty()) {

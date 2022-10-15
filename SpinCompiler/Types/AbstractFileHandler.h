@@ -24,6 +24,16 @@ public:
     FileDescriptor( const std::vector<unsigned char> &content, const std::string& fileName):content(content),fileName(fileName) {}
     const std::vector<unsigned char> content;
     const std::string fileName;
+    std::string baseName() const {
+        int lastDot = fileName.size();
+        for (int i=0; i<int(fileName.size()); ++i)
+            if (i>0 && fileName[i] == '.')
+                lastDot = i;
+        for (int i=int(fileName.size())-1; i>=0; --i)
+            if (fileName[i] == '/' || fileName[i] == '\\')
+                return fileName.substr(i+1, lastDot-(i+1));
+        return fileName.substr(0,lastDot);
+    }
     virtual ~FileDescriptor() {}
 };
 typedef std::shared_ptr<FileDescriptor> FileDescriptorP;

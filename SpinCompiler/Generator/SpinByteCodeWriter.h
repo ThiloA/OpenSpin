@@ -16,6 +16,7 @@
 #include "SpinCompiler/Types/SpinVariableInfo.h"
 #include <vector>
 #include <map>
+#include <iostream> //TODO weg
 
 struct SpinFunctionByteCodeEntry { //TODO wo anders hin
 
@@ -79,7 +80,12 @@ public:
     void appendRelativeAddress(SpinByteCodeLabel label) {
         m_code.push_back(SpinFunctionByteCodeEntry(SourcePosition(), SpinFunctionByteCodeEntry::RelativeAddressToLabel,label.value()));
     }
-
+    void appendPopStack() {
+        //TODO
+        std::cerr<<"WARN appendPopStack not yet tested"<<std::endl;
+        appendStaticPushConstant(SourcePosition(), 4); // enter pop count
+        appendStaticByte(0x14); // pop
+    }
     void appendStaticByte(int byteCode) {
         m_code.push_back(SpinFunctionByteCodeEntry(SourcePosition(), SpinFunctionByteCodeEntry::StaticByte, byteCode));
     }

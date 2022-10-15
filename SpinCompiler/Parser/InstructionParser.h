@@ -26,13 +26,13 @@ public:
         switch(tk0.type) {
             case Token::DefinedSymbol: {
                 if (auto objSym = std::dynamic_pointer_cast<SpinObjSymbol>(tk0.resolvedSymbol))
-                    return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseChildObjectMethodCall(0x01, objSym)));
+                    return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseChildObjectMethodCall(objSym, false)));
                 if (auto subSym = std::dynamic_pointer_cast<SpinSubSymbol>(tk0.resolvedSymbol))
-                    return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseMethodCall(tk0.sourcePosition, 0x01, subSym)));
+                    return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseMethodCall(tk0.sourcePosition, subSym, false)));
                 break;
             }
             case Token::Backslash:
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseTryCall(0x03)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseTryCall(true)));
             case Token::NextQuit:
                 return parseNextOrQuit((tk0.value & 0xFF) == 0);
             case Token::Abort:
@@ -42,27 +42,28 @@ public:
             case Token::Reboot:
                 return parseReboot();
             case Token::CogNew:
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseCogNew(true))); // no push;
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.parseCogNew())); // no push;
             case Token::CogInit:
                 return parseCogInit(exprCompiler);
             case Token::InstCanReturn: // instruction can-return
-                return AbstractInstructionP(new CallBuiltInInstruction(tk0.sourcePosition,
-                                                exprCompiler.parseParameters(tk0.unpackBuiltInParameterCount()),
-                                                tk0.unpackBuiltInByteCode()^0x04));
+                return AbstractInstructionP(new ExpressionInstruction(AbstractExpressionP(new CallBuiltInExpression(tk0.sourcePosition,
+                                                                                                             exprCompiler.parseParameters(tk0.unpackBuiltInParameterCount()),
+                                                                                                             BuiltInFunction::Type(tk0.unpackBuiltInByteCode())
+                                                                                                             ))));
             case Token::InstNeverReturn: // instruction never-return
                 return AbstractInstructionP(new CallBuiltInInstruction(tk0.sourcePosition,
                                                                        exprCompiler.parseParameters(tk0.unpackBuiltInParameterCount()),
                                                                        tk0.unpackBuiltInByteCode()));
             case Token::Inc: // assign pre-inc  ++var
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreIncOrDecX(0x20)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreIncOrDec(0x20)));
             case Token::Dec: // assign pre-dec  --var
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreIncOrDecX(0x30)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreIncOrDec(0x30)));
             case Token::Tilde: // assign sign-extern byte  ~var
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandomX(0x10)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandom(0x10)));
             case Token::TildeTilde: // assign sign-extern word  ~~var
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandomX(0x14)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandom(0x14)));
             case Token::Random: // assign random forward  ?var
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandomX(0x08)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandom(0x08)));
             default:
                 break;
         }
@@ -76,30 +77,27 @@ public:
         const auto tk2 = m_reader.getNextToken();
         switch (tk2.type) {
             case Token::Inc: // assign post-inc
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableIncOrDecX(0x28, varInfo)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableIncOrDec(0x28, varInfo)));
             case Token::Dec: // assign post-dec
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableIncOrDecX(0x38, varInfo)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableIncOrDec(0x38, varInfo)));
             case Token::Random: // assign random reverse
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperationX(0x0C, varInfo)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperation(0x0C, varInfo)));
             case Token::Tilde: // assign post-clear
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperationX(0x18, varInfo)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperation(0x18, varInfo)));
             case Token::TildeTilde: // assign post-set
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperationX(0x1C, varInfo)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableSideEffectOperation(0x1C, varInfo)));
             case Token::Assign:
-                return parseAssign(exprCompiler,0x1C, varInfo);
+                return parseAssign(exprCompiler, varInfo);
             default:
                 break;
         }
 
         // var binaryop?
         if (tk2.type == Token::Binary) {
-            unsigned char varOperator = 0x40;   // assign math w/swapargs
-            varOperator |= (unsigned char)(tk2.opType);
-
             // check for '=' after binary op
             const auto tk3 = m_reader.getNextToken();
             if (tk3.type == Token::Equal)
-                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableAssignExpressionXX(varOperator, varInfo, true)));
+                return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableAssignExpression(OperatorType::Type(tk2.opType), varInfo))); //TODO operator type cast weg
             m_reader.goBack(); // not '=' so backup
         }
         m_reader.goBack(); // no post-var modifier, so backup
@@ -158,11 +156,13 @@ private:
     }
 
     AbstractInstructionP parseUnary(ExpressionParser& exprCompiler, int value) {
-        return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandomX((unsigned char)(0x40 | (value & 0xFF)))));
+        return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariablePreSignExtendOrRandom(0x40 | value)));
     }
 
-    AbstractInstructionP parseAssign(ExpressionParser& exprCompiler, unsigned char vOperator, AbstractSpinVariableP varInfo) {
-        return AbstractInstructionP(new ExpressionInstruction(exprCompiler.compileVariableAssignExpressionXX(vOperator, varInfo, false)));
+    AbstractInstructionP parseAssign(ExpressionParser& exprCompiler, AbstractSpinVariableP varInfo) {
+        auto pos = m_reader.getSourcePosition();
+        auto valueExpression = exprCompiler.parseExpression();
+        return AbstractInstructionP(new ExpressionInstruction(AbstractExpressionP(new AssignExpression(pos, valueExpression, varInfo, OperatorType::None))));
     }
 };
 

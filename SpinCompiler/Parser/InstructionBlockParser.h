@@ -205,7 +205,7 @@ private:
         if (m_reader.checkElement(Token::End)) // repeat <exp>
             return subCompiler.parseRepeatCount(column, countExpression);
         auto varExpr = std::dynamic_pointer_cast<VariableExpression>(countExpression);
-        if (!varExpr || varExpr->operation != AbstractSpinVariable::Read)
+        if (!varExpr || varExpr->isReadReference)
             throw CompilerError(ErrorType::eav, countExpression->sourcePosition);
         // repeat var from <exp> to <exp> step <exp>
         return subCompiler.parseRepeatVariable(column, varExpr->variable);

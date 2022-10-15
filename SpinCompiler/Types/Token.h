@@ -43,6 +43,7 @@ struct OperatorType {
     // 9= AND
     // 10= OR
     enum Type {
+        None = -1,
         OpRor = 0,
         OpRol,
         OpShr,
@@ -79,43 +80,43 @@ struct OperatorType {
         OpRound,
         OpTrunc
     };
-    static std::string toString(Type op, const std::string& left, const std::string& right) {
+    static std::string toString(Type op) {
         switch(op)  {
-            case OpRor: return left+"->"+right;
-            case OpRol: return left+"<-"+right;
-            case OpShr: return left+">>"+right;
-            case OpShl: return left+"<<"+right;
-            case OpMin: return left+"#>"+right;
-            case OpMax: return left+"<#"+right;
-            case OpNeg: return "-"+left;
-            case OpNot: return "!"+left;
-            case OpAnd: return left+"&"+right;
-            case OpAbs: return "||"+left;
-            case OpOr: return left+"|"+right;
-            case OpXor: return left+"^"+right;
-            case OpAdd: return left+"+"+right;
-            case OpSub: return left+"-"+right;
-            case OpSar: return left+"~>"+right;
-            case OpRev: return left+"><"+right;
-            case OpLogAnd: return left+" AND "+right;
-            case OpNcd: return ">|"+left;
-            case OpLogOr: return left+" OR "+right;
-            case OpDcd: return "|<"+left;
-            case OpMul: return left+"*"+right;
-            case OpScl: return left+"**"+right;
-            case OpDiv: return left+"/"+right;
-            case OpRem: return left+"//"+right;
-            case OpSqr: return "^"+left;
-            case OpCmpB: return left+"<"+right;
-            case OpCmpA: return left+">"+right;
-            case OpCmpNe: return left+"<>"+right;
-            case OpCmpE: return left+"="+right;
-            case OpCmpBe: return left+"=<"+right;
-            case OpCmpAe: return left+"=>"+right;
-            case OpLogNot: return "NOT "+left;
-            case OpFloat: return "FLOAT("+left+")";
-            case OpRound: return "ROUND("+left+")";
-            case OpTrunc: return "TRUNC("+left+")";
+            case OpRor: return "->";
+            case OpRol: return "<-";
+            case OpShr: return ">>";
+            case OpShl: return "<<";
+            case OpMin: return "#>";
+            case OpMax: return "<#";
+            case OpNeg: return "-";
+            case OpNot: return "!";
+            case OpAnd: return "&";
+            case OpAbs: return "||";
+            case OpOr: return "|";
+            case OpXor: return "^";
+            case OpAdd: return "+";
+            case OpSub: return "-";
+            case OpSar: return "~>";
+            case OpRev: return "><";
+            case OpLogAnd: return "AND";
+            case OpNcd: return ">|";
+            case OpLogOr: return "OR";
+            case OpDcd: return "|<";
+            case OpMul: return "*";
+            case OpScl: return "**";
+            case OpDiv: return "/";
+            case OpRem: return "//";
+            case OpSqr: return "^";
+            case OpCmpB: return "<";
+            case OpCmpA: return ">";
+            case OpCmpNe: return "<>";
+            case OpCmpE: return "=";
+            case OpCmpBe: return "=<";
+            case OpCmpAe: return "=>";
+            case OpLogNot: return "NOT";
+            case OpFloat: return "FLOAT";
+            case OpRound: return "ROUND";
+            case OpTrunc: return "TRUNC";
         }
         return std::string();
     }
@@ -150,6 +151,26 @@ struct AsmConditionType {
         IfCOrZ      = 0xE,
         IfAlways    = 0xF
     };
+};
+
+struct BuiltInFunction {
+    enum Type {
+        FuncStrSize=0x16,FuncStrComp=0x17, //always return
+        FuncLockNew=0x29,FuncLockClr=0x2B,FuncLockSet=0x2A //can return
+    };
+    static bool hasPopReturnValue(BuiltInFunction::Type f) {
+        return f == FuncLockNew || f == FuncLockClr || f == FuncLockSet;
+    }
+    static std::string toString(BuiltInFunction::Type f) {
+        switch(f) {
+            case FuncStrSize: return "strsize";
+            case FuncStrComp: return "strcomp";
+            case FuncLockNew: return "locknew";
+            case FuncLockClr: return "lockclr";
+            case FuncLockSet: return "lockset";
+        }
+        return "illegal";
+    }
 };
 
 struct Token {
@@ -230,7 +251,7 @@ struct Token {
     };
 
     //Token():type(Undefined),value(0),opType(-1),asmOp(-1),eof(false),dual(false) {}
-    Token(SpinSymbolId symbolId, Type type, int value, const SourcePosition& sourcePosition):sourcePosition(sourcePosition),symbolId(symbolId),type(type),value(value),opType(-1),asmOp(-1),eof(false),dual(false) {}
+    Token(SpinSymbolId symbolId, Type type, int value, const SourcePosition& sourcePosition):sourcePosition(sourcePosition),symbolId(symbolId),type(type),value(value),opType(OperatorType::None),asmOp(-1),eof(false),dual(false) {}
     SpinAbstractSymbolP resolvedSymbol;
     SourcePosition sourcePosition;
     SpinSymbolId symbolId;

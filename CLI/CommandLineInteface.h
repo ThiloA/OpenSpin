@@ -51,7 +51,7 @@ struct CommandLineInterface {
         std::cerr << "    [ -M <size> ]                         size of eeprom (up to 16777216 bytes)"<<std::endl;
         //std::cerr << "    [ -s ]                 dump PUB & CON symbol information for top object"<<std::endl;
         std::cerr << "    [ -u ]                                enable unused method elimination"<<std::endl;
-        std::cerr << "    [ --annotated-output <json|html> ]    generated annotated json or html output"<<std::endl;
+        std::cerr << "    [ --annotated-output <json|html|ast> ]generated annotated json or html output"<<std::endl;
         std::cerr << "    <name.spin>                           spin file to compile"<<std::endl;
         std::cerr<<std::endl;
     }
@@ -141,6 +141,8 @@ struct CommandLineInterface {
                     m_settings.annotatedOutput = CompilerSettings::AnnotatedOutput::JSON;
                 else if (type == "html")
                     m_settings.annotatedOutput = CompilerSettings::AnnotatedOutput::HTML;
+                else if (type == "ast")
+                    m_settings.annotatedOutput = CompilerSettings::AnnotatedOutput::AST;
                 else
                     return "annotated output type must be json or html";
             }
@@ -155,6 +157,8 @@ struct CommandLineInterface {
                 m_outputFileName+=".json";
             else if (m_settings.annotatedOutput == CompilerSettings::AnnotatedOutput::HTML)
                 m_outputFileName+=".html";
+            else if (m_settings.annotatedOutput == CompilerSettings::AnnotatedOutput::AST)
+                m_outputFileName+=".ast";
             else if (m_settings.compileDatOnly)
                 m_outputFileName+=".dat";
             else if (m_settings.binaryMode)
@@ -203,7 +207,7 @@ struct CommandLineInterface {
         outFile.close();
         if (!m_quiet)
             std::cerr<<"Done"<<std::endl;
-        return false;
+        return true;
     }
 };
 

@@ -51,7 +51,7 @@ public:
         tk.symbolId = it->second.symbolId;
         tk.type = it->second.type;
         tk.value = it->second.value;
-        tk.opType = it->second.opType;
+        tk.opType = OperatorType::Type(it->second.opType);
         tk.asmOp = it->second.asmOp;
         tk.dual = it->second.dual;
     }

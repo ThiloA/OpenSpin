@@ -34,7 +34,7 @@ public:
             return found->second;
         }
 
-        ParsedObjectP newObj(new ParsedObject());
+        ParsedObjectP newObj(new ParsedObject(file->baseName()));
         ObjectHierarchy childHierarchy(newObj, hierarchy, includePos);
         m_objectMap[file.get()] = newObj;
         compile(file, childHierarchy);

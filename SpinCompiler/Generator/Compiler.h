@@ -17,6 +17,7 @@
 #include "SpinCompiler/Generator/UnusedMethodElimination.h"
 #include "SpinCompiler/Generator/FinalGenerator.h"
 #include "SpinCompiler/Generator/AnnotationWriter.h"
+#include "SpinCompiler/Generator/AstWriter.h"
 
 struct CompilerResult {
     std::vector<unsigned char> binary;
@@ -31,6 +32,13 @@ struct Compiler {
             auto rootObj = parser->compileObject(fileHandler->findFile(rootFileName,AbstractFileHandler::RootSpinFile,FileDescriptorP(),SourcePosition()), nullptr, SourcePosition());
             if (settings.unusedMethodOptimization != CompilerSettings::UnusedMethods::Keep)
                 UnusedMethodElimination::eliminateUnused(rootObj, settings.unusedMethodOptimization == CompilerSettings::UnusedMethods::RemovePartial);
+
+            if (settings.annotatedOutput == CompilerSettings::AnnotatedOutput::AST) {
+                ASTWriter awr(parser->stringMap,rootObj, result.binary, 0);
+                awr.generate();
+                return;
+            }
+
             GeneratorGlobalState globalGeneratorState(settings);
             BinaryObjectGenerator binGen(globalGeneratorState, parser->stringMap, rootObj);
             auto bin = binGen.run(false);
