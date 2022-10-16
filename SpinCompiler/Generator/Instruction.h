@@ -220,7 +220,7 @@ public:
         if (parentLoopContext.type == InstructionLoopContext::NoLoop)
             throw CompilerError(ErrorType::internal, sourcePosition);
         if (parentLoopContext.caseCount > 0) { // pop 2 longs for each nested 'case'
-            byteCodeWriter.appendStaticPushConstant(sourcePosition, ConstantValueExpression::create(sourcePosition, parentLoopContext.caseCount*8)); // enter pop count
+            byteCodeWriter.appendStaticPushConstant(sourcePosition, ConstantValueExpression::create(sourcePosition, parentLoopContext.caseCount*8), ConstantEncoding::AutoDetect); // enter pop count
             byteCodeWriter.appendStaticByte(0x14); // pop
         }
         byteCodeWriter.appendStaticByte(isNext ? 0x04 : (parentLoopContext.type == InstructionLoopContext::RepeatCountLoop ? 0x0B : 0x04)); // jmp 'next' otherwise jnz/jmp 'quit'

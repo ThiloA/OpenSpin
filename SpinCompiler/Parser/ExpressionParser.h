@@ -261,7 +261,7 @@ private:
         auto sourcePosition = m_reader.getSourcePosition();
         auto expr = tryParseConstantExpression(true, false).expression;
         m_reader.forceElement(Token::RightBracket);
-        return AbstractExpressionP(new PushConstantExpression(sourcePosition, expr));
+        return AbstractExpressionP(new PushConstantExpression(sourcePosition, expr, ConstantEncoding::AutoDetect));
     }
 
     // compile string("constantstring")
@@ -291,7 +291,7 @@ private:
     AbstractExpressionP parsePrimaryFloatRoundTrunc() {
         m_reader.goBack(); // backup to float/round/trunc
         auto sourcePosition = m_reader.getSourcePosition();
-        return AbstractExpressionP(new PushConstantExpression(sourcePosition, tryParseConstantExpression(true, false).expression));
+        return AbstractExpressionP(new PushConstantExpression(sourcePosition, tryParseConstantExpression(true, false).expression, ConstantEncoding::AutoDetect));
     }
 
     // compile obj[].pub\obj[]#con
@@ -300,7 +300,7 @@ private:
             return parseChildObjectMethodCall(objSymbol, false); // not obj#con, so do obj[].pub
         // lookup the symbol to get the value to compile
         auto sourcePosition = m_reader.getSourcePosition();
-        return AbstractExpressionP(new PushConstantExpression(sourcePosition, m_context.objectContext.getObjConstant(m_reader.getNextToken(), objSymbol->objectClass)->expression));
+        return AbstractExpressionP(new PushConstantExpression(sourcePosition, m_context.objectContext.getObjConstant(m_reader.getNextToken(), objSymbol->objectClass)->expression, ConstantEncoding::AutoDetect));
     }
 
     AbstractExpressionP parseLookExpression(int origTokenByteCode) {
@@ -319,32 +319,40 @@ private:
         return AbstractExpressionP(new LookExpression(sourcePosition, condition, listExpr, origTokenByteCode));
     }
 
-    AbstractExpressionP compileTermClkModeX(const SourcePosition& sourcePosition) {
-        return AbstractExpressionP(new FixedByteCodeSequenceExpression(sourcePosition, std::vector<unsigned char>{
-            0x38,4,// constant 4
-            0x80 //read byte[]
-        }));
+    AbstractExpressionP compileTermClkMode(const SourcePosition& sourcePosition) {
+        return AbstractExpressionP(new VariableExpression(AbstractSpinVariableP(new DirectMemorySpinVariable(
+                sourcePosition,
+                AbstractSpinVariable::Byte,
+                AbstractExpressionP(new PushConstantExpression(sourcePosition, 4, ConstantEncoding::NoMask)),
+                AbstractExpressionP()
+        )),false));
     }
 
-    AbstractExpressionP compileTermClkFreqX(const SourcePosition& sourcePosition) {
-        return AbstractExpressionP(new FixedByteCodeSequenceExpression(sourcePosition, std::vector<unsigned char>{
-            0x35, // constant 0
-            0xC0 // read long[]
-        }));
+    AbstractExpressionP compileTermClkFreq(const SourcePosition& sourcePosition) {
+        return AbstractExpressionP(new VariableExpression(AbstractSpinVariableP(new DirectMemorySpinVariable(
+                sourcePosition,
+                AbstractSpinVariable::Long,
+                AbstractExpressionP(new PushConstantExpression(sourcePosition, 0, ConstantEncoding::NoMask)),
+                AbstractExpressionP()
+        )),false));
     }
 
-    AbstractExpressionP compileTermChipVerX(const SourcePosition& sourcePosition) {
-        return AbstractExpressionP(new FixedByteCodeSequenceExpression(sourcePosition, std::vector<unsigned char>{
-            0x34,// constant -1
-            0x80 //read byte[]
-        }));
+    AbstractExpressionP compileTermChipVer(const SourcePosition& sourcePosition) {
+        return AbstractExpressionP(new VariableExpression(AbstractSpinVariableP(new DirectMemorySpinVariable(
+                sourcePosition,
+                AbstractSpinVariable::Byte,
+                AbstractExpressionP(new PushConstantExpression(sourcePosition, -1, ConstantEncoding::NoMask)),
+                AbstractExpressionP()
+        )),false));
     }
 
     AbstractExpressionP compileTermCogIdX(const SourcePosition& sourcePosition) {
-        return AbstractExpressionP(new FixedByteCodeSequenceExpression(sourcePosition, std::vector<unsigned char>{
-            0x3F,// reg op
-            0x89 // read id
-        }));
+        return AbstractExpressionP(new VariableExpression(AbstractSpinVariableP(new CogRegisterSpinVariable(
+                sourcePosition,
+                9, // read id
+                AbstractExpressionP(),
+                AbstractExpressionP()
+        )),false));
     }
 
     // compile @var
@@ -374,7 +382,7 @@ private:
                 return parseTryCall(true);
             case Token::DefinedSymbol: {
                 if (auto conSym = std::dynamic_pointer_cast<SpinConstantSymbol>(tk0.resolvedSymbol))
-                    return AbstractExpressionP(new PushConstantExpression(tk0.sourcePosition, conSym->expression));
+                    return AbstractExpressionP(new PushConstantExpression(tk0.sourcePosition, conSym->expression, ConstantEncoding::AutoDetect));
                 if (auto objSym = std::dynamic_pointer_cast<SpinObjSymbol>(tk0.resolvedSymbol))
                     return parseChildObjectAccess(objSym);
                 if (auto subSym = std::dynamic_pointer_cast<SpinSubSymbol>(tk0.resolvedSymbol))
@@ -384,11 +392,11 @@ private:
             case Token::Look:
                 return parseLookExpression(tk0.value & 0xFF);
             case Token::ClkMode:
-                return compileTermClkModeX(tk0.sourcePosition);
+                return compileTermClkMode(tk0.sourcePosition);
             case Token::ClkFreq:
-                return compileTermClkFreqX(tk0.sourcePosition);
+                return compileTermClkFreq(tk0.sourcePosition);
             case Token::ChipVer:
-                return compileTermChipVerX(tk0.sourcePosition);
+                return compileTermChipVer(tk0.sourcePosition);
             case Token::CogId:
                 return compileTermCogIdX(tk0.sourcePosition);
             case Token::CogNew:

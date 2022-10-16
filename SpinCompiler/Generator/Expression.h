@@ -537,10 +537,12 @@ protected:
 class PushConstantExpression : public AbstractExpression {
 public:
     const AbstractConstantExpressionP constant;
-    explicit PushConstantExpression(const SourcePosition& sourcePosition, AbstractConstantExpressionP constant):AbstractExpression(sourcePosition),constant(constant) {}
+    const ConstantEncoding encoding;
+    explicit PushConstantExpression(const SourcePosition& sourcePosition, AbstractConstantExpressionP constant, ConstantEncoding encoding):AbstractExpression(sourcePosition),constant(constant),encoding(encoding) {}
+    explicit PushConstantExpression(const SourcePosition& sourcePosition, int value, ConstantEncoding encoding):AbstractExpression(sourcePosition),constant(ConstantValueExpression::create(sourcePosition,value)),encoding(encoding) {}
     virtual ~PushConstantExpression() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, bool removeResultFromStack) const {
-        byteCodeWriter.appendStaticPushConstant(sourcePosition, constant);
+        byteCodeWriter.appendStaticPushConstant(sourcePosition, constant, encoding);
         if (removeResultFromStack)
             byteCodeWriter.appendPopStack();
     }
@@ -708,26 +710,6 @@ protected:
         if (!modified)
             return AbstractExpressionP(); //nullptr means no change
         return AbstractExpressionP(new AtAtExpression(sourcePosition, expressionNew));
-    }
-};
-
-class FixedByteCodeSequenceExpression : public AbstractExpression { //TODO ggf ersetzen
-public:
-    const std::vector<unsigned char> byteCode;
-    explicit FixedByteCodeSequenceExpression(const SourcePosition& sourcePosition, const std::vector<unsigned char> &byteCode):AbstractExpression(sourcePosition),byteCode(byteCode) {}
-    virtual ~FixedByteCodeSequenceExpression() {}
-    virtual void generate(SpinByteCodeWriter &byteCodeWriter, bool /*removeResultFromStack*/) const {
-        for (unsigned char b:byteCode)
-            byteCodeWriter.appendStaticByte(b);
-    }
-    virtual std::string toILangStr() const {
-        return "(fixed bc todo)"; //TODO
-    }
-protected:
-    virtual void iterateChildExpressions(const std::function<void(AbstractExpressionP)>&) const {
-    }
-    virtual AbstractExpressionP mapChildExpressions(const std::function<AbstractExpressionP(AbstractExpressionP)>&) const {
-        return AbstractExpressionP();
     }
 };
 

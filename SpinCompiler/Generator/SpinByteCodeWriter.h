@@ -18,6 +18,10 @@
 #include <map>
 #include <iostream> //TODO weg
 
+enum struct ConstantEncoding {
+    AutoDetect,NoMask
+};
+
 struct SpinFunctionByteCodeEntry { //TODO wo anders hin
 
     enum Type { StaticByte,PushIntConstant,PushExprConstant,StringReference,
@@ -83,17 +87,17 @@ public:
     void appendPopStack() {
         //TODO
         std::cerr<<"WARN appendPopStack not yet tested"<<std::endl;
-        appendStaticPushConstant(SourcePosition(), 4); // enter pop count
+        appendStaticPushConstant(SourcePosition(), 4, ConstantEncoding::AutoDetect); // enter pop count
         appendStaticByte(0x14); // pop
     }
     void appendStaticByte(int byteCode) {
         m_code.push_back(SpinFunctionByteCodeEntry(SourcePosition(), SpinFunctionByteCodeEntry::StaticByte, byteCode));
     }
-    void appendStaticPushConstant(const SourcePosition& sourcePosition, int constantValue) {
-        m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, SpinFunctionByteCodeEntry::PushIntConstant, constantValue, 0));
+    void appendStaticPushConstant(const SourcePosition& sourcePosition, int constantValue, ConstantEncoding encoding) {
+        m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, SpinFunctionByteCodeEntry::PushIntConstant, constantValue, int(encoding)));
     }
-    void appendStaticPushConstant(const SourcePosition& sourcePosition, AbstractConstantExpressionP expression) {
-        m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, SpinFunctionByteCodeEntry::PushExprConstant, 0, 0, expression));
+    void appendStaticPushConstant(const SourcePosition& sourcePosition, AbstractConstantExpressionP expression, ConstantEncoding encoding) {
+        m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, SpinFunctionByteCodeEntry::PushExprConstant, 0, int(encoding), expression));
     }
 
     void appendStringReference(const SourcePosition& sourcePosition, int stringNumber, const std::vector<AbstractConstantExpressionP>& stringData) {

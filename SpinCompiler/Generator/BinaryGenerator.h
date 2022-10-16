@@ -119,10 +119,10 @@ private:
                 m_resultByteCode.push_back(e.value);
                 break;
             case SpinFunctionByteCodeEntry::PushExprConstant:
-                generateByteCodeForPushConstant(e.expression->evaluate(m_generator));
+                generateByteCodeForPushConstant(e.expression->evaluate(m_generator),ConstantEncoding(e.subroutineIdOrVarAddress));
                 break;
             case SpinFunctionByteCodeEntry::PushIntConstant:
-                generateByteCodeForPushConstant(e.value);
+                generateByteCodeForPushConstant(e.value,ConstantEncoding(e.subroutineIdOrVarAddress));
                 break;
             case SpinFunctionByteCodeEntry::StringReference: {
                 m_stringPatches.push_back(StringPatch(m_resultByteCode.size(), e.value));
@@ -131,7 +131,7 @@ private:
                 break;
             }
             case SpinFunctionByteCodeEntry::CogInitNewSpinSubroutine:
-                generateByteCodeForPushConstant(Token::packSubroutineParameterCountAndIndexForInterpreter(e.value, 1+m_currentObject->methodIndexById(MethodId(e.subroutineIdOrVarAddress))));
+                generateByteCodeForPushConstant(Token::packSubroutineParameterCountAndIndexForInterpreter(e.value, 1+m_currentObject->methodIndexById(MethodId(e.subroutineIdOrVarAddress))),ConstantEncoding::AutoDetect);
                 break;
             case SpinFunctionByteCodeEntry::SubroutineOwnObject:
                 m_resultByteCode.push_back(1+m_currentObject->methodIndexById(MethodId(e.subroutineIdOrVarAddress)));
@@ -183,7 +183,7 @@ private:
             }
         }
     }
-    void generateByteCodeForPushConstant(int value) {
+    void generateByteCodeForPushConstant(int value, ConstantEncoding encodingHint) {
         if (value >= -1 && value <= 1) {
             // constant is -1, 0, or 1, so compiles to a single bytecode
             m_resultByteCode.push_back((value+1) | 0x34);
@@ -195,18 +195,20 @@ private:
         //				 all bits on except one (e.g. 0xFFFF7FFF),
         //			     all bits on up to a bit then all zeros (e.g. 0x0000FFFF),
         //				 or all bits off up to a bit then all ones (e.g. 0xFFFF0000)
-        for (unsigned char i = 0; i < 128; i++) {
-            int testVal = 2;
-            testVal <<= (i & 0x1F); // mask i, so that we only actually shift 0 to 31
+        if (encodingHint != ConstantEncoding::NoMask) {
+            for (unsigned char i = 0; i < 128; i++) {
+                int testVal = 2;
+                testVal <<= (i & 0x1F); // mask i, so that we only actually shift 0 to 31
 
-            if (i & 0x20) // i in range 32 to 63 or 96 to 127
-                testVal--;
-            if (i& 0x40) // i in range 64 to 127
-                testVal = ~testVal;
-            if (testVal == value) {
-                m_resultByteCode.push_back(0x37); // (constant mask)
-                m_resultByteCode.push_back(i);
-                return;
+                if (i & 0x20) // i in range 32 to 63 or 96 to 127
+                    testVal--;
+                if (i& 0x40) // i in range 64 to 127
+                    testVal = ~testVal;
+                if (testVal == value) {
+                    m_resultByteCode.push_back(0x37); // (constant mask)
+                    m_resultByteCode.push_back(i);
+                    return;
+                }
             }
         }
 

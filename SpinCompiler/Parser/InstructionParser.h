@@ -122,12 +122,11 @@ private:
     }
 
     AbstractInstructionP parseReboot() {
-        //TODO hack
-        return AbstractInstructionP(new ExpressionInstruction(AbstractExpressionP(new FixedByteCodeSequenceExpression(m_reader.getSourcePosition(),std::vector<unsigned char>{
-            0x37,0x06, // constant 0x80
-            0x35, // constant 0
-            0x20 //clkset
-        }))));
+        auto sourcePosition = m_reader.getSourcePosition();
+        return AbstractInstructionP(new CallBuiltInInstruction(sourcePosition,{
+            AbstractExpressionP(new PushConstantExpression(sourcePosition, 0x80, ConstantEncoding::AutoDetect)),
+            AbstractExpressionP(new PushConstantExpression(sourcePosition, 0x00, ConstantEncoding::AutoDetect))
+        },0x20 /*clkset*/));
     }
 
     AbstractInstructionP parseCogInit(ExpressionParser& exprCompiler) {
