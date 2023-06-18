@@ -40,6 +40,15 @@ public:
         compile(file, childHierarchy);
         return newObj;
     }
+    std::vector<ParsedObjectP> listAllObjects(ParsedObjectP root) const {
+        std::vector<ParsedObjectP> result;
+        result.reserve(m_objectMap.size());
+        result.push_back(root);
+        for (auto it:m_objectMap)
+            if (it.second != root)
+                result.push_back(it.second);
+        return result;
+    }
 private:
     std::map<FileDescriptor*, ParsedObjectP> m_objectMap;
     const CompilerSettings &m_settings;

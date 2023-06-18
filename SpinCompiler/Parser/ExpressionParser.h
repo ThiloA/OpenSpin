@@ -102,27 +102,26 @@ public:
         }
         AbstractSpinVariable::SizeModifier size=AbstractSpinVariable::Long;
         NamedSpinVariable::VarType varType = NamedSpinVariable::LocMemoryAccess;
-        AbstractConstantExpressionP address;
-        if (tk0.type == Token::Result)
-            address = ConstantValueExpression::create(tk0.sourcePosition, 0); //RESULT is always at stack position 0
-        else if (tk0.type == Token::DefinedSymbol) {
+        int symbolId=-1; //RESULT
+        if (tk0.type == Token::DefinedSymbol) {
             if (auto varSym = std::dynamic_pointer_cast<SpinVarSectionSymbol>(tk0.resolvedSymbol)) {
                 varType = NamedSpinVariable::VarMemoryAccess;
-                address = AbstractConstantExpressionP(new VarSymbolConstantExpression(tk0.sourcePosition, varSym->id));
+                symbolId = varSym->id.value();
                 size = AbstractSpinVariable::SizeModifier(varSym->size);
             }
             else if (auto datSym = std::dynamic_pointer_cast<SpinDatSectionSymbol>(tk0.resolvedSymbol)) {
                 //TODO if(datSym->isRes) return false; ? mit original program schauen, ob man auch auf einen res bezeichner zugreifen kann
                 varType = NamedSpinVariable::DatMemoryAccess;
-                address = AbstractConstantExpressionP(new DatSymbolConstantExpression(tk0.sourcePosition, datSym->id, false));
+                symbolId = datSym->id.value();
                 size = AbstractSpinVariable::SizeModifier(datSym->size);
             }
-            else if (auto locSym = std::dynamic_pointer_cast<SpinLocSymbol>(tk0.resolvedSymbol))
-                address = AbstractConstantExpressionP(new LocSymbolConstantExpression(tk0.sourcePosition, locSym->id));
+            else if (auto locSym = std::dynamic_pointer_cast<SpinLocSymbol>(tk0.resolvedSymbol)) {
+                symbolId = locSym->id.value();
+            }
             else
                 throw CompilerError(errorOnNoVar, tk0);
         }
-        else
+        else if (tk0.type != Token::Result)
             throw CompilerError(errorOnNoVar, tk0);
         // if we got here then it's a var/dat/loc type
         auto indexExpression = readIndexExpression(false);
@@ -138,7 +137,7 @@ public:
                 indexExpression = readIndexExpression(false); //TODO index required?
             }
         }
-        return AbstractSpinVariableP(new NamedSpinVariable(tk0.sourcePosition, size, varType, address, indexExpression));
+        return AbstractSpinVariableP(new NamedSpinVariable(tk0.sourcePosition, size, varType, indexExpression, symbolId));
     }
 
     // compile obj[].pub

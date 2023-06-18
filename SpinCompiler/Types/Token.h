@@ -82,6 +82,7 @@ struct OperatorType {
     };
     static std::string toString(Type op) {
         switch(op)  {
+            case None: return "";
             case OpRor: return "->";
             case OpRol: return "<-";
             case OpShr: return ">>";
@@ -282,6 +283,85 @@ struct Token {
     }
     bool isValidWordSymbol() const {
         return symbolId.valid();
+    }
+
+    static std::string typeToString(Type type) {
+        switch(type) {
+            case Undefined: return "Undefined";
+            case LeftBracket: return "(";
+            case RightBracket: return ")";
+            case LeftIndex: return "[";
+            case RightIndex: return "]";
+            case Comma: return ",";
+            case Equal: return "=";
+            case Pound: return "#";
+            case Colon: return ":";
+            case Backslash: return "\\";
+            case Dot: return ".";
+            case DotDot: return "..";
+            case At: return "@";
+            case AtAt: return "@@";
+            case Tilde: return "~";
+            case TildeTilde: return "~~";
+            case Random: return "?";
+            case Inc: return "++";
+            case Dec: return "--";
+            case Assign: return ":=";
+            case SPR: return "SPR";
+            case Unary: return "Unary"; // -, !, ||, etc.
+            case Binary: return "Binary"; // +, -, *, /, etc.
+            case Float: return "FLOAT";
+            case Round: return "ROUND";
+            case Trunc: return "TRUNC";
+            case ConExpr: return "CONSTANT";
+            case ConStr: return "STRING";
+            case Block: return "StartOfBlock"; // CON, VAR, DAT, OBJ, PUB, PRI
+            case Size: return "Size"; // BYTE, WORD, LONG
+            case PreCompile: return "PRECOMPILE";
+            case Archive: return "ARCHIVE";
+            case File: return "FILE";
+            case If: return "IF";
+            case IfNot: return "IFNOT";
+            case ElseIf: return "ELSEIF";
+            case ElseIfNot: return "ELSEIFNOT";
+            case Else: return "ELSE";
+            case Case: return "CASE";
+            case Other: return "OTHER";
+            case Repeat: return "REPEAT";
+            case RepeatCount: return "REPEAT count";
+            case While: return "WHILE";
+            case Until: return "UNTIL";
+            case From: return "FROM";
+            case To: return "TO";
+            case Step: return "STEP";
+            case NextQuit: return "NEXT/QUTI"; // NEXT/QUIT
+            case Abort: return "ABORT";
+            case Return: return "RETURN";
+            case Look: return "LOOK UP/DOWN";
+            case ClkMode: return "CLKMODE";
+            case ClkFreq: return "CLKFREQ";
+            case ChipVer: return "CHIPVER";
+            case Reboot: return "REBOOT";
+            case CogId: return "COGID";
+            case CogNew: return "COGNEW";
+            case CogInit: return "COGINIT";
+            case InstAlwaysReturn: return "STRSIZE/STRCOMP";
+            case InstCanReturn: return "LOCK NEW/CLR/SET";
+            case InstNeverReturn: return "*FILL;*MOVE";
+            case InstDualOperation:return "ASM/SPIN OP";
+            case AsmOrg:return "Asm$"; // $ (without a hex digit following)
+            case AsmDir:return "AsmDirective"; // ORGX, ORG, RES, FIT, NOP
+            case AsmCond:return "AsmCondition"; // IF_C, IF_Z, IF_NC, etc
+            case AsmInst:return "AsmInstruction"; // RDBYTE, RDWORD, RDLONG, etc.
+            case AsmEffect:return "AsmEffect"; // WZ, WC, WR, NR
+            case AsmReg:return "AsmReg"; // PAR, CNT, INA, etc.
+            case Result:return "RESULT"; // RESULT
+            case BuiltInIntegerConstant : return "Integer"; // user constant integer (must be followed by type_con_float)
+            case BuiltInFloatConstant: return "Float"; // user constant float
+            case End: return "End"; // end-of-line c=0, end-of-file c=1     //70
+            case DefinedSymbol: return "Symbol"; // symbol listed in symbol table
+        }
+        return "Unknown";
     }
 };
 

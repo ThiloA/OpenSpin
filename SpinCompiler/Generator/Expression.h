@@ -90,11 +90,11 @@ public:
 
 struct NamedSpinVariable : public AbstractSpinVariable {
     enum VarType { VarMemoryAccess, DatMemoryAccess, LocMemoryAccess};
-    VarType varType;
-    AbstractConstantExpressionP fixedAddressExpression;
-    AbstractExpressionP indexExpression; //might be nullptr
+    const VarType varType;
+    const AbstractExpressionP indexExpression; //might be nullptr
+    const int symbolId;
 
-    explicit NamedSpinVariable(const SourcePosition& sourcePosition, SizeModifier size, VarType varType, AbstractConstantExpressionP fixedAddressExpression, AbstractExpressionP indexExpression):AbstractSpinVariable(sourcePosition,size),varType(varType),fixedAddressExpression(fixedAddressExpression),indexExpression(indexExpression) {}
+    explicit NamedSpinVariable(const SourcePosition& sourcePosition, SizeModifier size, VarType varType, AbstractExpressionP indexExpression, int symbolId):AbstractSpinVariable(sourcePosition,size),varType(varType),indexExpression(indexExpression),symbolId(symbolId) {}
     virtual ~NamedSpinVariable() {}
     virtual void generate(SpinByteCodeWriter &byteCodeWriter, VariableOperation operation) const {
         if (indexExpression)
@@ -105,7 +105,7 @@ struct NamedSpinVariable : public AbstractSpinVariable {
             case VarMemoryAccess: ftype = SpinFunctionByteCodeEntry::VariableVar; break;
             case LocMemoryAccess: ftype = SpinFunctionByteCodeEntry::VariableLoc; break;
         }
-        byteCodeWriter.appendVariableReference(sourcePosition, ftype,operation,size,indexExpression ? true : false, fixedAddressExpression);
+        byteCodeWriter.appendVariableReference(sourcePosition, ftype,operation,size,indexExpression ? true : false, symbolId);
     }
     virtual bool canTakeReference() const {
         return true;
@@ -118,7 +118,7 @@ struct NamedSpinVariable : public AbstractSpinVariable {
         auto newIndexExpr = AbstractExpression::mapExpression(indexExpression, callback, &modified);
         if (!modified)
             return AbstractSpinVariableP(); //nullptr means no change
-        return AbstractSpinVariableP(new NamedSpinVariable(sourcePosition, size, varType, fixedAddressExpression, newIndexExpr));
+        return AbstractSpinVariableP(new NamedSpinVariable(sourcePosition, size, varType, newIndexExpr, symbolId));
     }
     virtual std::string toILangStr() const {
         std::string result;
@@ -127,7 +127,7 @@ struct NamedSpinVariable : public AbstractSpinVariable {
             case VarMemoryAccess: result = "var "; break;
             case LocMemoryAccess: result = "loc "; break;
         }
-        result += fixedAddressExpression->toILangStr();
+        result += std::to_string(symbolId);
         if (indexExpression)
             result += " idx "+indexExpression->toILangStr();
         return result;

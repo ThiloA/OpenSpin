@@ -34,8 +34,10 @@ struct Compiler {
                 UnusedMethodElimination::eliminateUnused(rootObj, settings.unusedMethodOptimization == CompilerSettings::UnusedMethods::RemovePartial);
 
             if (settings.annotatedOutput == CompilerSettings::AnnotatedOutput::AST) {
-                ASTWriter awr(parser->stringMap,rootObj, result.binary, 0);
-                awr.generate();
+                for (auto o:parser->listAllObjects(rootObj)) {
+                    ASTWriter awr(parser->stringMap,o, result.binary, 0);
+                    awr.generate();
+                }
                 return;
             }
 

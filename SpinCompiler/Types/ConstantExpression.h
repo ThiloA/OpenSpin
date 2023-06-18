@@ -277,30 +277,6 @@ struct DatSymbolConstantExpression : public AbstractConstantExpression {
     }
 };
 
-struct VarSymbolConstantExpression : public AbstractConstantExpression {
-    explicit VarSymbolConstantExpression(const SourcePosition& sourcePosition, VarSymbolId varSymbolId):AbstractConstantExpression(sourcePosition),varSymbolId(varSymbolId) {}
-    virtual ~VarSymbolConstantExpression() {}
-    const VarSymbolId varSymbolId;
-    virtual int evaluate(AbstractBinaryGenerator* generator) const {
-        return generator->addressOfVarSymbol(varSymbolId);
-    }
-    virtual std::string toILangStr() const {
-        return "(var "+std::to_string(varSymbolId.value())+")";
-    }
-};
-
-struct LocSymbolConstantExpression : public AbstractConstantExpression {
-    explicit LocSymbolConstantExpression(const SourcePosition& sourcePosition, LocSymbolId locSymbolId):AbstractConstantExpression(sourcePosition),locSymbolId(locSymbolId) {}
-    virtual ~LocSymbolConstantExpression() {}
-    const LocSymbolId locSymbolId;
-    virtual int evaluate(AbstractBinaryGenerator* generator) const {
-        return generator->addressOfLocSymbol(locSymbolId);
-    }
-    virtual std::string toILangStr() const {
-        return "(loc "+std::to_string(locSymbolId.value())+")";
-    }
-};
-
 struct ChildObjConstantExpression : public AbstractConstantExpression {
     explicit ChildObjConstantExpression(const SourcePosition& sourcePosition, ObjectClassId objectClass, int constantIndex):AbstractConstantExpression(sourcePosition),objectClass(objectClass),constantIndex(constantIndex) {}
     virtual ~ChildObjConstantExpression() {}

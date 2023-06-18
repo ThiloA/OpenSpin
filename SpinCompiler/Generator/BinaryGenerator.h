@@ -119,10 +119,10 @@ private:
                 m_resultByteCode.push_back(e.value);
                 break;
             case SpinFunctionByteCodeEntry::PushExprConstant:
-                generateByteCodeForPushConstant(e.expression->evaluate(m_generator),ConstantEncoding(e.subroutineIdOrVarAddress));
+                generateByteCodeForPushConstant(e.expression->evaluate(m_generator),ConstantEncoding(e.id));
                 break;
             case SpinFunctionByteCodeEntry::PushIntConstant:
-                generateByteCodeForPushConstant(e.value,ConstantEncoding(e.subroutineIdOrVarAddress));
+                generateByteCodeForPushConstant(e.value,ConstantEncoding(e.id));
                 break;
             case SpinFunctionByteCodeEntry::StringReference: {
                 m_stringPatches.push_back(StringPatch(m_resultByteCode.size(), e.value));
@@ -131,24 +131,27 @@ private:
                 break;
             }
             case SpinFunctionByteCodeEntry::CogInitNewSpinSubroutine:
-                generateByteCodeForPushConstant(Token::packSubroutineParameterCountAndIndexForInterpreter(e.value, 1+m_currentObject->methodIndexById(MethodId(e.subroutineIdOrVarAddress))),ConstantEncoding::AutoDetect);
+                generateByteCodeForPushConstant(Token::packSubroutineParameterCountAndIndexForInterpreter(e.value, 1+m_currentObject->methodIndexById(MethodId(e.id))),ConstantEncoding::AutoDetect);
                 break;
             case SpinFunctionByteCodeEntry::SubroutineOwnObject:
-                m_resultByteCode.push_back(1+m_currentObject->methodIndexById(MethodId(e.subroutineIdOrVarAddress)));
+                m_resultByteCode.push_back(1+m_currentObject->methodIndexById(MethodId(e.id)));
                 break;
             case SpinFunctionByteCodeEntry::SubroutineChildObject: {
                 ObjectInstanceId oid(e.value);
                 m_resultByteCode.push_back(m_generator->mapObjectInstanceIdToOffset(oid)); //object index
-                const int methodIndex = m_currentObject->childObjectByObjectInstanceId(oid).object->methodIndexById(MethodId(e.subroutineIdOrVarAddress));
+                const int methodIndex = m_currentObject->childObjectByObjectInstanceId(oid).object->methodIndexById(MethodId(e.id));
                 m_resultByteCode.push_back(1+methodIndex);
                 break;
             }
-            case SpinFunctionByteCodeEntry::VariableDat:
             case SpinFunctionByteCodeEntry::VariableVar:
-            case SpinFunctionByteCodeEntry::VariableLoc: {
-                generateVariableReferenceByteCode(e.type, e.value, e.expression->evaluate(m_generator));
+                generateVariableReferenceByteCode(e.type, e.value, m_generator->addressOfVarSymbol(VarSymbolId(e.id)));
                 break;
-            }
+            case SpinFunctionByteCodeEntry::VariableDat:
+                generateVariableReferenceByteCode(e.type, e.value, m_generator->valueOfDatSymbol(DatSymbolId(e.id), false));
+                break;
+            case SpinFunctionByteCodeEntry::VariableLoc:
+                generateVariableReferenceByteCode(e.type, e.value, e.id<0 ? 0 : m_generator->addressOfLocSymbol(LocSymbolId(e.id)));
+                break;
             case SpinFunctionByteCodeEntry::PlaceLabel: {
                 SpinByteCodeLabel lbl(e.value);
                 if (absoluteAddressOfLabel(lbl) != currentAbsoluteAddress) {

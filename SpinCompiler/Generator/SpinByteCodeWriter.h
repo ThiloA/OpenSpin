@@ -28,11 +28,11 @@ struct SpinFunctionByteCodeEntry { //TODO wo anders hin
                 CogInitNewSpinSubroutine,SubroutineOwnObject,SubroutineChildObject,
                 VariableDat,VariableVar,VariableLoc,
                 PlaceLabel,RelativeAddressToLabel,AbsoluteAddressToLabel};
-    SpinFunctionByteCodeEntry(const SourcePosition& sourcePosition, Type type, int value, int subroutineId=0, AbstractConstantExpressionP expression=AbstractConstantExpressionP()):sourcePosition(sourcePosition),type(type),value(value),subroutineIdOrVarAddress(subroutineId),expression(expression) {}
+    SpinFunctionByteCodeEntry(const SourcePosition& sourcePosition, Type type, int value, int id=0, AbstractConstantExpressionP expression=AbstractConstantExpressionP()):sourcePosition(sourcePosition),type(type),value(value),id(id),expression(expression) {}
     SourcePosition sourcePosition;
     Type type;
     int value; //for type==CogInitNewSpinSubroutine: parameterCount
-    int subroutineIdOrVarAddress;
+    int id;
     AbstractConstantExpressionP expression;
 
 
@@ -119,10 +119,10 @@ public:
         m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, SpinFunctionByteCodeEntry::SubroutineChildObject,objectIndexId.value(),methodId.value()));
     }
 
-    void appendVariableReference(const SourcePosition& sourcePosition, SpinFunctionByteCodeEntry::Type type, int operation, int varSize, bool hasIndexExpression, AbstractConstantExpressionP fixedAddressExpression) {
+    void appendVariableReference(const SourcePosition& sourcePosition, SpinFunctionByteCodeEntry::Type type, int operation, int varSize, bool hasIndexExpression, int symbolId) {
         m_code.push_back(SpinFunctionByteCodeEntry(sourcePosition, type,
                                                    SpinFunctionByteCodeEntry::packVarInfo(operation,varSize,hasIndexExpression),
-                                                   0,fixedAddressExpression));
+                                                   symbolId));
     }
 };
 

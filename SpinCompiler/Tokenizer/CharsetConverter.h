@@ -82,7 +82,7 @@ public:
        /*7A0*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
        /*7C0*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
        /*7E0*/ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-    } {} //end of constructor
+    },m_lastWasCR(false) {} //end of constructor
     void convert() {
         if (m_src.size()>=2 && m_src[0] == 0xFF && m_src[1] == 0xFE)
             convertFromUtf16LE(2);
@@ -101,19 +101,26 @@ private:
     const std::vector<unsigned char>& m_src;
     std::string &m_dst;
     const unsigned char m_charConvertMap[0x800];
+    bool m_lastWasCR;
     void appendChar(int unicode) {
-        if (unicode == 0x0A) { //convert \r\n -> \r, convert \n -> \r
-            if (m_dst.empty() || m_dst.back() != 0x0D)
+        if (unicode == '\n') { //convert \r\n -> \r, convert \n -> \r
+            if (!m_lastWasCR)
                 m_dst.push_back(0x0D);
+            m_lastWasCR = false;
             return;
         }
+        m_lastWasCR = unicode == '\r';
         if (unicode == 0xFEFF || unicode == 0xFFFE) //skip bom
             return;
         const char tmpChr = char(m_charConvertMap[(unicode | ((unicode >> 5) & ~(unicode >> 4) & 0x0100)) & 0x07FF]);
         m_dst.push_back(tmpChr);
     }
-    void convertFromUtf16LE(int idx) {
+    void clear() {
         m_dst.clear();
+        m_lastWasCR = false;
+    }
+    void convertFromUtf16LE(int idx) {
+        clear();
         const int size = static_cast<int>(m_src.size() & 0xFFFFFFFE); //force even number
         while (idx<size) {
             appendChar(m_src[idx] | (m_src[idx+1]<<8));
@@ -123,7 +130,7 @@ private:
             m_dst.push_back(char(255));
     }
     void convertFromUtf16BE(int idx) {
-        m_dst.clear();
+        clear();
         const int size = static_cast<int>(m_src.size() & 0xFFFFFFFE); //force even number
         while (idx<size) {
             appendChar(m_src[idx+1] | (m_src[idx]<<8));
@@ -133,13 +140,13 @@ private:
             m_dst.push_back(char(255));
     }
     void convertFromLatin1(int idx) {
-        m_dst.clear();
+        clear();
         const int size = static_cast<int>(m_src.size());
         while (idx<size)
             appendChar(m_src[idx++]&0xFF);
     }
     bool convertFromUtf8(int idx) {
-        m_dst.clear();
+        clear();
         const int size = static_cast<int>(m_src.size());
         while (idx<size) {
             const int c = m_src[idx++]&0xFF;
